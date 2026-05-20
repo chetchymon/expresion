@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { generateExpressionPrompt } from "./lib/gemini.js";
+import { generateExpressionPrompt, generateImage } from "./lib/gemini.js";
 
 async function startServer() {
   const app = express();
@@ -9,6 +9,25 @@ async function startServer() {
 
   // Use a higher JSON limit for image uploads
   app.use(express.json({ limit: "15mb" }));
+
+  // API endpoint - Handles image generation from prompt
+  app.post("/api/generate-image", async (req, res) => {
+    try {
+      const { prompt, style } = req.body;
+
+      if (!prompt) {
+        return res.status(400).json({ error: "No prompt provided." });
+      }
+
+      const imageUrl = await generateImage(prompt, style);
+      return res.json({ imageUrl });
+    } catch (err: any) {
+      console.error("Error generating image:", err);
+      return res.status(500).json({
+        error: err.message || "An error occurred during image generation."
+      });
+    }
+  });
 
   // API endpoint - Handles image + expressions analysis
   app.post("/api/analyze", async (req, res) => {

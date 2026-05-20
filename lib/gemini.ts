@@ -94,3 +94,69 @@ Generate ONLY the high-quality prompt, started with no intro, no conversational 
 
   return response.text || "Failed to generate prompt from Gemini.";
 }
+
+/**
+ * Generates an image using an image generation model based on the analyzed expression prompt.
+ */
+export async function generateImage(
+  expressionPrompt: string,
+  style: string = "Pixar 3D animated style"
+): Promise<string> {
+  const client = getGeminiClient();
+  
+  // Format prompt for wholesome safe DALL-E / ChatGPT styled outputs but with Gemini-Image
+  const cleanExpression = expressionPrompt.replace(/^Hyper-detailed\s+/i, "");
+  const fullPrompt = `A delightful, adorable 3D animated digital character in a beautiful ${style}. The character is expressing: ${cleanExpression}. Single character centered close-up, highly detailed portrait, colorful, wholesome, Pixar and Disney aesthetic, perfect 3D render, studio lighting.`;
+
+  console.log("Generating with full image prompt:", fullPrompt);
+
+  try {
+    // 1. Try gemini-2.5-flash-image
+    const response = await client.models.generateContent({
+      model: "gemini-2.5-flash-image",
+      contents: {
+        parts: [
+          {
+            text: fullPrompt,
+          },
+        ],
+      },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1",
+        },
+      },
+    });
+
+    if (response?.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData?.data) {
+          return `data:image/png;base64,${part.inlineData.data}`;
+        }
+      }
+    }
+    throw new Error("No inline image data found in first candidate.");
+  } catch (err: any) {
+    console.warn("First model (gemini-2.5-flash-image) failed, trying fallback:", err);
+    try {
+      // 2. Try fallback to Imagen
+      const response = await client.models.generateImages({
+        model: "imagen-3.0-generate-002",
+        prompt: fullPrompt,
+        config: {
+          numberOfImages: 1,
+          outputMimeType: "image/jpeg",
+          aspectRatio: "1:1",
+        },
+      });
+      if (response?.generatedImages?.[0]?.image?.imageBytes) {
+        return `data:image/jpeg;base64,${response.generatedImages[0].image.imageBytes}`;
+      }
+      throw new Error("No imageBytes found in Imagen response.");
+    } catch (fallbackErr: any) {
+      console.error("All image generation models failed:", fallbackErr);
+      throw new Error(`Failed to generate image: ${fallbackErr.message || fallbackErr}`);
+    }
+  }
+}
+

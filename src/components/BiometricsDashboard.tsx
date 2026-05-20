@@ -10,11 +10,39 @@ interface BiometricsDashboardProps {
 
 export default function BiometricsDashboard({ prompt, landmarkAnalysis, isProcessing }: BiometricsDashboardProps) {
   const [copied, setCopied] = useState(false);
+  const [selectedStyle, setSelectedStyle] = useState("Pixar 3D animated style");
+  const [generatedImage, setGeneratedImage] = useState("");
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [imageError, setImageError] = useState("");
 
   const handleCopy = () => {
     navigator.clipboard.writeText(prompt);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleGenerateImage = async () => {
+    if (!prompt) return;
+    setIsGeneratingImage(true);
+    setImageError("");
+    setGeneratedImage("");
+    try {
+      const response = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, style: selectedStyle }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate your character copycat.");
+      }
+      setGeneratedImage(data.imageUrl);
+    } catch (err: any) {
+      console.error("Failed to generate image:", err);
+      setImageError(err.message || "An unexpected error occurred while painting.");
+    } finally {
+      setIsGeneratingImage(false);
+    }
   };
 
   // Convert commas into playful chip bubbles for children/creatives
@@ -200,6 +228,108 @@ export default function BiometricsDashboard({ prompt, landmarkAnalysis, isProces
           </div>
         )}
       </div>
+
+      {/* 🔮 Kid-Friendly Image Generation Panel */}
+      {prompt && (
+        <div id="character-generator-panel" className="rounded-3xl border-4 border-slate-950 bg-[#2a2929] p-6 shadow-[6px_6px_0px_#000] space-y-5">
+          <div className="flex items-center space-x-2 border-b-2 border-slate-900 pb-3">
+            <Wand2 className="w-5 h-5 text-cyan-300 stroke-[2.5]" />
+            <h3 className="font-sans font-black text-white text-base md:text-lg tracking-tight">
+              🪄 Paint Your Goofy Expression!
+            </h3>
+          </div>
+
+          <p className="text-xs font-sans font-medium text-slate-300 leading-relaxed">
+            Ready to bring your scanned silly face to life? Choose a magical art style below and watch the AI paint your official Copycat character!
+          </p>
+
+          {/* Style Selector Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {[
+              { id: "Pixar 3D animated style", label: "🧸 Pixar 3D" },
+              { id: "Cute Claymation Toy style", label: "🎨 Clay Toy" },
+              { id: "Vibrant Anime Portrait style", label: "⚡ Anime Hero" },
+              { id: "Chibi Video Game Mascot style", label: "🎮 Chibi Mascot" },
+              { id: "Whimsical Watercolor Sketch style", label: "🌸 Watercolor" },
+              { id: "Retro Pixel Art Mascot style", label: "👾 Pixel Retro" },
+            ].map((styleOption) => (
+              <button
+                key={styleOption.id}
+                onClick={() => setSelectedStyle(styleOption.id)}
+                className={`p-2.5 rounded-xl border-2 text-[11px] font-sans font-black transition-all duration-150 uppercase tracking-wide text-left flex flex-col justify-between h-14 cursor-pointer relative overflow-hidden ${
+                  selectedStyle === styleOption.id
+                    ? "border-amber-300 bg-slate-950 text-amber-300 shadow-[2px_2px_0px_#000] translate-y-[1px]"
+                    : "border-slate-950 bg-[#1f1e1e] text-slate-400 hover:text-slate-200 shadow-[3px_3px_0px_#000]"
+                }`}
+              >
+                {selectedStyle === styleOption.id && (
+                  <div className="absolute inset-0 bg-gradient-to-br opacity-5 pointer-events-none" />
+                )}
+                <span>{styleOption.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Action Trigger Button */}
+          <button
+            onClick={handleGenerateImage}
+            disabled={isGeneratingImage || !prompt}
+            className="w-full py-3 bg-gradient-to-r from-amber-400 to-pink-500 text-slate-950 border-3 border-slate-950 rounded-2xl text-xs font-sans font-black tracking-wider hover:from-amber-300 hover:to-pink-400 active:translate-y-[1px] transition duration-150 uppercase shadow-[4px_4px_0px_#000] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-45 disabled:pointer-events-none"
+          >
+            {isGeneratingImage ? (
+              <>
+                <div className="w-4 h-4 rounded-full border-2 border-slate-950 border-t-transparent animate-spin" />
+                <span>AI is painting your silly face...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4.5 h-4.5 text-slate-950 stroke-[2.5]" />
+                <span>Generate Magical Character!</span>
+              </>
+            )}
+          </button>
+
+          {/* Generation Error Display */}
+          {imageError && (
+            <div className="p-3.5 bg-red-950/45 border-2 border-red-900 rounded-2xl flex items-start space-x-2.5 text-xs text-red-200">
+              <span className="text-sm">⚠️</span>
+              <div>
+                <p className="font-bold font-sans">Magic Painting Failed</p>
+                <p className="opacity-80 font-mono">{imageError}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Final Render Output Window */}
+          {generatedImage && (
+            <div className="relative rounded-2xl border-4 border-slate-950 bg-slate-950 p-2 overflow-hidden shadow-[inset_0_4px_12px_rgba(0,0,0,0.8)]">
+              <img
+                src={generatedImage}
+                alt="Your Generated Character"
+                className="w-full h-auto aspect-square rounded-xl object-cover border-2 border-slate-900"
+                referrerPolicy="no-referrer"
+              />
+              
+              <div className="mt-2.5 p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex items-center justify-between gap-3 text-xs">
+                <div>
+                  <p className="font-sans font-black text-amber-300 uppercase tracking-widest text-[9px] flex items-center gap-1">
+                    <Star className="w-3 h-3 text-pink-400 fill-pink-400 pr-0.5" />
+                    Copycat Replica Successful
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-medium">100% kid-safe cartoon image generated by Gemini</p>
+                </div>
+                <a
+                  href={generatedImage}
+                  download="copycat-expression-character.png"
+                  className="px-3 py-1.5 bg-cyan-400 text-slate-950 text-[10px] font-sans font-black tracking-wider uppercase rounded-lg border-2 border-slate-950 hover:bg-cyan-300 active:scale-95 transition-all shadow-[2.5px_2.5px_0px_#000]"
+                >
+                  Download
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Dynamic ChatGPT & Minor Safety Companion Card */}
       <div id="safety-companion-card" className="rounded-3xl border-4 border-slate-950 bg-amber-400 text-slate-950 p-6 shadow-[6px_6px_0px_#000] space-y-3.5">
