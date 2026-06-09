@@ -1,0 +1,6 @@
+{
+  "name": "ExpressionPrompt AI",
+  "description": "Upload a face image to extract landmarks and generate highly descriptive AI image prompts reproducing the exact facial expression.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

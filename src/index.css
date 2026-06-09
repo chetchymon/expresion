@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@keyframes scanLine {
+  0% {
+    top: 5%;
+    opacity: 0.1;
+  }
+  15% {
+    opacity: 0.95;
+  }
+  50% {
+    top: 95%;
+    opacity: 0.95;
+  }
+  85% {
+    opacity: 0.95;
+  }
+  100% {
+    top: 5%;
+    opacity: 0.1;
+  }
+}
+
